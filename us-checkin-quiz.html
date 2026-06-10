@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Us · A 100-Question Check-in</title>
+<style>
+  :root{
+    --ink:#1A2421; --muted:#6B7672; --paper:#FAFAF7; --card:#FFFFFF;
+    --accent:#993556; --accent-soft:#FBEAF0; --line:#E4E4DD;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    font-family:Georgia,'Times New Roman',serif; background:var(--paper); color:var(--ink);
+    min-height:100vh; display:flex; justify-content:center; padding:24px 16px;
+  }
+  .mono{font-family:'Courier New',monospace; letter-spacing:.04em;}
+  .app{width:100%; max-width:580px;}
+  header{display:flex; justify-content:space-between; align-items:baseline; padding-bottom:14px; border-bottom:2px solid var(--ink); margin-bottom:18px;}
+  header h1{font-size:17px; font-weight:normal; font-style:italic;}
+  #counter{font-size:13px; color:var(--muted);}
+  .bar{height:3px; background:var(--line); margin-bottom:24px;}
+  .bar div{height:3px; background:var(--accent); width:0%; transition:width .25s;}
+  .cat{display:inline-block; font-size:11px; text-transform:uppercase; padding:4px 10px; background:var(--accent-soft); color:var(--accent); margin-bottom:6px;}
+  .hint{font-size:12px; color:var(--muted); margin-bottom:12px;}
+  .q{font-size:20px; line-height:1.45; margin-bottom:18px;}
+  .opts{display:flex; flex-direction:column; gap:8px;}
+  .opt{
+    font-family:inherit; font-size:15px; text-align:left; padding:11px 14px 11px 40px; cursor:pointer;
+    background:var(--card); border:1px solid var(--line); border-left:3px solid var(--line);
+    position:relative; transition:border-color .15s, background .15s; line-height:1.4;
+  }
+  .opt::before{
+    content:''; position:absolute; left:13px; top:14px;
+    width:15px; height:15px; border:1.5px solid var(--muted); background:var(--card);
+  }
+  .opt:hover{border-color:var(--accent); border-left-color:var(--accent);}
+  .opt.sel{background:var(--accent-soft); border-color:var(--accent); border-left-color:var(--accent); color:var(--accent);}
+  .opt.sel::before{background:var(--accent); border-color:var(--accent); content:'✓'; color:#fff; font-size:11px; line-height:14px; text-align:center;}
+  .own{display:flex; gap:8px; align-items:center; margin-top:4px;}
+  .own input{
+    flex:1; font-family:inherit; font-size:15px; padding:11px 14px;
+    border:1px dashed var(--muted); background:var(--card); color:var(--ink);
+  }
+  .own input:focus{outline:none; border:1px solid var(--accent);}
+  .own label{font-size:12px; color:var(--muted); font-family:'Courier New',monospace; text-transform:uppercase; white-space:nowrap;}
+  .nav{display:flex; justify-content:space-between; align-items:center; margin-top:22px;}
+  .ghost{
+    font-family:'Courier New',monospace; font-size:13px; background:none; border:none; cursor:pointer;
+    color:var(--muted); padding:8px 4px; text-transform:uppercase; letter-spacing:.06em;
+  }
+  .ghost:hover{color:var(--ink);}
+  .ghost:disabled{opacity:.3; cursor:default;}
+  .next{
+    font-family:'Courier New',monospace; font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+    padding:11px 24px; cursor:pointer; border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+  }
+  .next:hover{background:var(--accent); border-color:var(--accent);}
+  .start, .end{text-align:center; padding-top:8px;}
+  .start h2,.end h2{font-size:24px; font-weight:normal; margin-bottom:8px;}
+  .start p,.end p{color:var(--muted); font-size:15px; margin-bottom:18px; line-height:1.6; text-align:left;}
+  .start input{
+    width:100%; max-width:320px; font-family:inherit; font-size:16px; padding:12px 14px;
+    border:1px solid var(--line); background:var(--card); margin-bottom:16px; text-align:center;
+  }
+  .start input:focus{outline:none; border-color:var(--accent);}
+  .actions{display:flex; gap:10px; justify-content:center; margin-top:16px; flex-wrap:wrap;}
+  .btn{
+    font-family:'Courier New',monospace; font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+    padding:12px 22px; cursor:pointer; border:1px solid var(--ink); background:var(--ink); color:var(--paper);
+  }
+  .btn:hover{background:var(--accent); border-color:var(--accent);}
+  .btn.alt{background:none; color:var(--ink);}
+  .btn.alt:hover{color:var(--accent); border-color:var(--accent); background:none;}
+  #copied{font-size:13px; color:var(--accent); margin-top:10px; min-height:18px;}
+  .warn{font-size:12px; color:var(--accent); margin-top:14px;}
+  footer{margin-top:36px; text-align:center; font-size:11px; color:var(--muted);}
+  #printReport{display:none;}
+  @media(max-width:420px){.q{font-size:18px;}}
+  @media print{
+    .app{display:none;}
+    body{display:block; padding:0; background:#fff;}
+    #printReport{display:block; font-family:Georgia,serif; color:#1A2421; font-size:11.5pt; line-height:1.5;}
+    #printReport h1{font-size:16pt; font-weight:normal; border-bottom:2pt solid #1A2421; padding-bottom:6pt; margin-bottom:4pt;}
+    #printReport .meta{font-size:9pt; color:#555; margin-bottom:14pt; font-family:'Courier New',monospace;}
+    #printReport h2{font-size:11pt; font-weight:bold; text-transform:uppercase; letter-spacing:.05em; margin:14pt 0 6pt; color:#993556;}
+    #printReport .pq{margin-bottom:7pt; page-break-inside:avoid;}
+    #printReport .pq .t{font-style:italic;}
+    #printReport .pq .a{padding-left:14pt;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Us — a check-in</h1>
+    <span id="counter" class="mono">START</span>
+  </header>
+  <div class="bar"><div id="prog"></div></div>
+  <main id="stage"></main>
+  <footer class="mono">100 questions · multiple answers allowed · answer 8 is always your own words</footer>
+</div>
+<div id="printReport"></div>
+
+<script>
+const SECTIONS=[
+"I · The last 2-3 months","II · Communication","III · Time & everyday life","IV · Affection & intimacy","V · Conflict & repair",
+"VI · Support & feeling seen","VII · You, as an individual","VIII · Us & the world around us","IX · The next 2-3 months","X · What we work on"
+];
+const QS=[
+[0,"How would you describe the last 2-3 months for us, overall?",["One of our best phases","Good and steady","Up and down","Busy - we ran past each other","A bit distant at times","Stressful, but we held together","Honestly, difficult"]],
+[0,"Which word fits our relationship right now?",["Safe","Exciting","Comfortable","Routine","Tense","Growing","Tired"]],
+[0,"How connected did you feel to me lately?",["Very - closer than ever","Mostly connected","Connected, with some gaps","On and off","Less than I would like","Distant lately","Hard to say"]],
+[0,"What took up most of our shared energy recently?",["Work and careers","Family matters","Health and fitness","Planning the future","Everyday logistics","Conflicts between us","Nothing - we coasted"]],
+[0,"What was our best moment recently?",["A trip or a day out","A deep conversation","An ordinary evening at home","Cooking or eating together","Something we achieved together","A moment of support in a hard time","Laughing about something silly"]],
+[0,"What do you miss most from earlier phases of us?",["Spontaneity","More time together","Deeper conversations","More affection","More laughter","Shared adventures","Nothing - now is good"]],
+[0,"How fairly were responsibilities shared between us lately?",["Very fairly","Mostly fair","I carried more","You carried more","It shifted around - and that was fine","We never really talked about it","Unfairly, and it bothers me"]],
+[0,"When we were physically apart, how present did I feel to you?",["Very present - texts, calls, thoughts","Present enough","Sometimes absent","Often absent","You felt far away","I actually like some distance","I did not think about it much"]],
+[0,"How much did outside stress (work, studies, family) spill into us?",["Not at all","A little - we managed it","Noticeably","A lot","It dominated some weeks","It dominated most weeks","It actually brought us closer"]],
+[0,"If the last months were a weather report, they were...",["Sunny","Mostly sunny with a few clouds","Changeable","Cloudy with bright spells","Stormy at times","Foggy - hard to see clearly","The calm before something new"]],
+[1,"How well did we really listen to each other lately?",["Very well, both ways","Well, most of the time","You listen better than I do","I listen better than you do","We hear words, not meaning","Only when it was urgent","We mostly talked logistics"]],
+[1,"What do I usually do when you tell me about your day?",["Listen fully and ask questions","Listen, but half on my phone","Jump to solutions too fast","Relate it back to myself","It depends on my mood","Really engage - I love it","You rarely get to tell me"]],
+[1,"Which topic did we quietly avoid in the last months?",["Money","Future plans","Family","Intimacy","Old conflicts","Feelings in general","Nothing - we talk about everything"]],
+[1,"When something about me bothers you, what do you usually do?",["Say it immediately","Wait for the right moment","Hint at it and hope I notice","Keep it inside","Talk to someone else first","It comes out later in an argument","Write it down or process it alone first"]],
+[1,"How do you prefer to have difficult conversations?",["Face to face, right away","Face to face, but planned","While walking","Over dinner or a drink","Text first, then talk","With time to think before we start","Short and direct, no big ceremony"]],
+[1,"What does my communication need more of?",["Patience","Honesty","Warmth","Clarity","Humor","Listening without fixing","Asking about your inner world"]],
+[1,"How often did we have a real conversation - not logistics?",["Daily","A few times a week","About weekly","A few times a month","Rarely","Only when a problem forced us","I cannot remember the last one"]],
+[1,"What is hardest for you to say to me?",["Criticism","My needs and wishes","My fears","No","Things about money","Things about intimacy","Nothing is hard to say to you"]],
+[1,"When I go quiet, what do you assume?",["You are just tired","You are processing something","Something is wrong with us","Work is stressing you","You need space","You are hiding something","I ask instead of assuming"]],
+[1,"How safe do you feel being completely honest with me?",["Completely safe","Mostly safe","Safe about most topics","It depends on your mood","I soften things for you","I hold back more than you know","Less safe than I used to"]],
+[2,"How satisfied are you with the amount of real quality time we had?",["Very satisfied","Satisfied","It was okay","Less than I wanted","Much less than I wanted","Quality was missing, not quantity","Quantity was missing, not quality"]],
+[2,"Our typical evening together is mostly...",["Cooking and talking","A series and cuddling","Phones, side by side","Separate things in the same room","Out with other people","Sport or activity together","We rarely have shared evenings"]],
+[2,"What would make our ordinary days better?",["Phone-free time","Cooking together more","Evening walks","A shared morning routine","Small surprises","More touch in passing","Honestly - a bit more own space"]],
+[2,"Which shared activity do you want more of?",["Traveling","Sport together","Cooking","Culture - cinema, concerts, museums","Lazy days doing nothing","Time with friends together","A project we build together"]],
+[2,"How do you feel about how we spend our weekends?",["I love them","Good, mostly","Too full and scheduled","Too empty and aimless","Too much obligation, too little us","Too much couch, too little world","They belong to everyone but us"]],
+[2,"How much time just for yourself did you get?",["Plenty","Enough","Barely enough","Too little","Almost none","Honestly, too much","We never talked about this"]],
+[2,"Date nights in the last months were...",["Regular and great","Regular but a bit routine","Rare but great","Rare and flat","Basically nonexistent","Spontaneous - which I love","Spontaneous - but I want planned ones"]],
+[2,"Who initiates plans for the two of us?",["Mostly me","Mostly you","Pretty balanced","Whoever is less stressed","Nobody - we drift","The calendar decides for us","Our friends decide for us"]],
+[2,"Phones during our shared time are...",["Not an issue","Sometimes in the way","Often in the way","A real problem","Mostly your phone","Mostly my phone","Fine - we have good habits"]],
+[2,"The household and life-admin balance feels...",["Fair","Mostly fair","Like I do more","Like you do more","Chaotic, but we laugh about it","Like a constant small fight","Like something we never defined"]],
+[3,"How loved did you feel in the last months?",["Deeply loved","Loved","Loved, but it got quiet","Loved in words, less in actions","Loved in actions, less in words","Less than before","It varied a lot"]],
+[3,"My main way of showing love towards you seems to be...",["Words and compliments","Time and attention","Gifts and surprises","Helping and taking care of things","Touch and physical closeness","Planning our future","Honestly hard to tell"]],
+[3,"What do you actually need most from me?",["Words and compliments","Undivided time","Small gestures and surprises","Practical support","More touch and closeness","Commitment to our future","Just presence - phone away, eyes here"]],
+[3,"Physical affection - hugs, kisses, touch in passing - lately was...",["Plenty and natural","Good","Less than I want","Much less than I want","A bit routine","Mostly initiated by me","Mostly initiated by you"]],
+[3,"Our intimacy lately felt...",["Close and connected","Good","A bit routine","Less frequent than I wish","More frequent than I need","Disconnected","Like something we should talk about"]],
+[3,"Small gestures - notes, surprises, compliments...",["Happen often, both ways","I give more than I get","You give more than you get","Too rare, both ways","Not really our thing, and that is fine","I want more of them","I want to give more of them"]],
+[3,"When did you last feel really desired by me?",["This week","This month","A while ago","I honestly cannot remember","On our last trip","In small everyday moments","I would rather write it"]],
+[3,"Compliments from me are...",["Frequent and genuine","Frequent but a bit generic","Rare but meaningful","Too rare","Mostly about looks","Mostly about achievements","I do not need many"]],
+[3,"What kills closeness for you the fastest?",["Phones","Endless stress-talk","Criticism","Tiredness","Unresolved fights hanging in the air","Lack of effort","Routine"]],
+[3,"What rebuilds closeness for you the fastest?",["A long hug","A real conversation","Time alone together","Laughing together","Physical intimacy","Doing something new together","Being taken care of"]],
+[4,"How did we argue in the last months?",["Rarely, and fairly","Rarely, but it lingers afterwards","Often, but fairly","Often, and it gets hurtful","We avoid arguments altogether","One explodes, one withdraws","About nonsense - never the real thing"]],
+[4,"In conflicts, I tend to...",["Stay calm and logical","Get defensive","Withdraw and go quiet","Get loud","Want to win","Want to fix it fast","Listen well, actually"]],
+[4,"In conflicts, YOU tend to...",["Stay calm and logical","Get defensive","Withdraw and go quiet","Get loud","Want to win","Want to fix it fast","Listen well, actually"]],
+[4,"Our recurring argument - if we have one - is about...",["Time and priorities","Money","Family","Household","How we talk to each other","Jealousy or attention","We genuinely do not have one"]],
+[4,"Right after a fight, what do you need first?",["Space","A hug","An apology in actual words","A solution","Reassurance that you are loved","Humor to break the tension","Sleep - everything looks better after"]],
+[4,"How well do I apologize?",["Sincerely and fully","Sincerely, but late","With a -but- attached","Through actions instead of words","Rarely","You usually apologize first","We both struggle with it"]],
+[4,"Unresolved issues between us right now...",["None","One small one","One big one","A few small ones","Several, and they pile up","One you might not even know about","I would rather write it"]],
+[4,"When I criticize you, it usually lands as...",["Helpful","Honest but harsh","Nitpicking","Caring","Like a performance review","It depends entirely on your tone","You rarely criticize me"]],
+[4,"The fastest way I hurt you WITHOUT noticing is...",["Sarcasm","Answering feelings with logic","Being distracted","Comparing","Putting work first","Criticizing small things","Withdrawing"]],
+[4,"How do we usually repair after a conflict?",["Talk it through fully","Quick sorry, move on","Sweep it under the rug","Physical closeness","Time just heals it","One of us always gives in","We never really repair"]],
+[5,"How supported did you feel in your personal goals?",["Fully supported","Supported","Supported in words, less in actions","Only when I asked","Not really seen","My goals compete with yours","I kept them to myself"]],
+[5,"Do I understand what is currently stressing you?",["Completely","Mostly","Partly","Not really","You never really asked","I hide it well","I would rather write it"]],
+[5,"When you had a bad day, I usually...",["Noticed immediately","Noticed once you told me","Tried to fix it straight away","Just listened","Gave you space","Was too busy to notice","Somehow made it about me"]],
+[5,"How proud do you think I am of you?",["Very, and I feel it","Very, but you rarely say it","Somewhat","Only about certain things","I honestly do not know","Less than I would like","Prouder of your own stuff"]],
+[5,"What do you wish I asked you about more often?",["Your feelings","Your work or studies","Your friendships","Your worries","Your dreams and plans","Your family","Nothing - you ask enough"]],
+[5,"Do you feel like my priority?",["Always","Mostly","Often behind work","Often behind sport and hobbies","Often behind friends or family","It varies a lot","Honestly, no"]],
+[5,"My ambition - career, sport, projects - feels to you...",["Inspiring","Attractive","Sometimes exhausting","Like competition for our time","Like quiet pressure on you","Neutral","I admire it, but I miss you"]],
+[5,"When you are very emotional or crying, I...",["Hold you","Listen","Try to solve it","Get a bit uncomfortable","Bring logic too early","Give you space","You rarely let me see it"]],
+[5,"How well do I know your inner world by now?",["Deeply","Well","The surface of it","Less than you think","Better than anyone else","There are still locked rooms","I would rather write it"]],
+[5,"Support from me, ideally, looks like...",["Listening","Practical help","Encouragement and belief","Just being present","Taking things off your plate","Honest advice, even if hard","Defending you in front of others"]],
+[6,"How much room is there for YOU inside this relationship?",["Plenty","Enough","Sometimes too little","Too little","I lose myself a bit","Too much - I want more -us-","It feels perfectly balanced"]],
+[6,"What have you given up recently that you miss?",["A hobby","Time with friends","Spontaneity","Time alone","Career or study options","Nothing, really","I would rather write it"]],
+[6,"How have YOU changed in the last months?",["More confident","More tired","Calmer","More anxious about the future","More ambitious","Softer and more open","I do not think I changed"]],
+[6,"What are you currently proud of yourself for?",["Work or studies","Sport and health","How I handle stress","How I show up for people","A personal project","Growing as a person","I would rather write it"]],
+[6,"What do you struggle with that I might not fully see?",["Self-doubt","Body image","Pressure to perform","Worries about family","Fear about our future","Loneliness, sometimes","I would rather write it"]],
+[6,"Your energy level lately has been...",["High","Good","Okay","Drained by work or studies","Drained by us","Drained by family things","Up and down"]],
+[6,"What recharges you the most?",["Sport","Sleep","Time alone","Time with me","Friends","Nature","Getting things done"]],
+[6,"Do you feel free to grow inside this relationship?",["Completely","Mostly","In some areas","You grow faster, I follow","I grow faster, you follow","I sometimes shrink to fit","I have not thought about it"]],
+[6,"A fear about us you rarely say out loud...",["Growing apart","Wanting different lives","Routine slowly killing it","Not being enough for you","Money and future pressure","Our families","I would rather write it"]],
+[6,"One thing you want me to simply ACCEPT about you...",["My need for alone time","My moods","My pace","My family and how I handle them","My friendships","My ambitions","I would rather write it"]],
+[7,"The balance between us-time and friends-time was...",["Just right","Too much us, too little friends","Too much friends, too little us","Your friends got more than I did","My friends got more than you did","We barely saw anyone","We barely saw each other"]],
+[7,"How do you feel around my family?",["Welcome and relaxed","Welcome but on best behavior","It depends on the occasion","A bit like a guest","Tense sometimes","We see them too often","We see them too rarely"]],
+[7,"How do I behave around YOUR family?",["Naturally - they love you","Politely but distant","You make a real effort","You could make more effort","A bit too quiet","A bit too dominant","We have not tested it enough"]],
+[7,"Do we show up as a team to the outside world?",["Absolutely","Mostly","In public yes, at home less","At home yes, in public less","You sometimes side with others","I sometimes side with others","I never thought about it"]],
+[7,"Jealousy in the last months was...",["Not a thing","A little, on my side","A little, on your side","Sometimes a topic","A real topic","Present but unspoken","I would rather write it"]],
+[7,"Money between us feels...",["Clear and fair","Mostly fine","A bit untransparent","Unequal","Like a topic we avoid","Stressful","Like something we should plan together"]],
+[7,"How do our schedules - work, uni, training - affect us?",["They fit well","Mostly manageable","We live in different rhythms","Your schedule rules our life","My schedule rules our life","Weekends save us","They quietly eat our time"]],
+[7,"Social media and our relationship...",["No issue at all","Sometimes a bit weird","I would like fewer posts","I would like more posts about us","Comparison with others hurts sometimes","Scrolling beats presence too often","Completely irrelevant to us"]],
+[7,"Shared friendships...",["We have plenty and I love it","Some - I want more","Mostly separate circles, and that is fine","Mostly separate - I want more shared ones","Your friends feel distant to me","My friends feel distant to you","Friendships are not a priority now"]],
+[7,"How supportive are our families of us as a couple?",["Both fully behind us","Mostly supportive","Yours more than mine","Mine more than yours","Supportive but opinionated","They put pressure on us","We keep them out of it"]],
+[8,"What do you wish for MOST in the next 2-3 months for us?",["More quality time","More adventure","More calm and stability","More intimacy","Better communication","Concrete future planning","More fun and lightness"]],
+[8,"One trip or experience you want with me soon...",["A weekend city trip","Nature and hiking","Beach and doing nothing","Visiting friends or family together","Something sporty","One really fancy date","Staying home - but properly, just us"]],
+[8,"A habit you want US to start...",["A weekly date night","Phone-free dinners","Sport together","Cooking together regularly","A monthly check-in talk like this","Saving for something together","A small morning or evening ritual"]],
+[8,"A habit you want us to STOP...",["Phones in bed","Eating at different times","Postponing plans","Petty bickering","Cancelling dates when busy","Talking only logistics","Letting the weeks just blur past"]],
+[8,"Your ideal ORDINARY week with me includes...",["At least one date night","Daily real conversation","Training or sport together","One lazy evening, no plans","Cooking together twice","An hour of phone-free time daily","More spontaneity, less structure"]],
+[8,"Something new you want to try together...",["A new sport or activity","A new place to travel","A course or skill together","New things in intimacy","A shared budget or savings goal","Hosting friends more","I would rather write it"]],
+[8,"What should we concretely plan in the next months?",["The next vacation","Visits to each other's people","Our finances","Our living situation","A shared project","Fitness or health goals","Nothing - less planning, more living"]],
+[8,"How often should we have a -state of us- talk?",["Weekly","Every two weeks","Monthly","Quarterly","Only when something is wrong","This quiz once is enough","Never - overthinking kills the magic"]],
+[8,"What would make you feel 10 percent more loved IMMEDIATELY?",["More compliments","More touch","More undivided attention","More help in daily life","More initiative for plans","More patience","A real surprise"]],
+[8,"In 3 months, I want us to look back and say...",["We grew closer","We had so much fun","We finally fixed that one thing","We planned our future","We handled a stressful phase well","Nothing changed - it was already good","I would rather write it"]],
+[9,"What should I - your partner - work on MOST?",["Presence and attention","Patience","Expressing feelings","Less work, more us","More initiative for plans and dates","Taking criticism better","Listening without immediately fixing"]],
+[9,"What will YOU work on?",["Saying what I need earlier","Being more patient","Being more affectionate","Stressing less about small things","Making more time for us","Being more honest about feelings","Taking better care of myself"]],
+[9,"What should WE work on together?",["How we communicate","How we manage our time","Intimacy and closeness","How we fight and repair","Planning our future","Fun and spontaneity","Nothing major - just keep going"]],
+[9,"What should I definitely KEEP doing?",["The way you care in small ways","Your honesty","Your humor","Your ambition - it inspires me","Planning things for us","Physical affection","Being my safe place"]],
+[9,"What will YOU keep doing?",["Caring in small ways","Being honest","Bringing the humor","Pushing us to do things","Being the calm one","Being affectionate","Believing in us"]],
+[9,"The biggest RISK for us in the next months is...",["Stress and full schedules","Physical or emotional distance","Routine","Unspoken issues","Other people's opinions","Money or future pressure","I honestly see none"]],
+[9,"The biggest OPPORTUNITY for us in the next months is...",["More free time coming up","A trip we can take","A fresh start after a hard phase","Building better habits","Getting clearer about the future","Just enjoying a good phase","I would rather write it"]],
+[9,"A sentence you want to hear from me more often...",["I am proud of you","I missed you","You are beautiful","How are you - really?","I will take care of it","Let us go away this weekend","I love you"]],
+[9,"How committed do you feel to making the next months great?",["100 percent - let us go","Very committed","Committed, but tired","Committed, but I need your help","Unsure where to start","I need you to take the lead","I would rather write it"]],
+[9,"Anything else you want me to know?",["I am happy with us","I am hopeful about us","I am worried, but all in","I need a little patience right now","I need more from you - let us talk","Thank you for doing this with me","I would rather write it"]]
+];
+
+let started=false, idx=0, userName='';
+const sel=QS.map(()=>new Set());
+const own=QS.map(()=>'');
+const stage=document.getElementById('stage');
+const prog=document.getElementById('prog');
+const counter=document.getElementById('counter');
+const pad=n=>String(n).padStart(2,'0');
+const esc=t=>t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function renderStart(){
+  counter.textContent='START';
+  prog.style.width='0%';
+  stage.innerHTML=
+    '<div class="start">'+
+      '<h2>Us — a 100-question check-in</h2>'+
+      '<p>How were the last 2-3 months for us, and what do we wish for the next 2-3? Answer alone, honestly, without checking what the other picked. You can select several answers per question — and answer 8 is always a box for your own words, which is often where the real stuff lives. At the end you get a PDF report. Then swap reports — or hand both to Claude.</p>'+
+      '<p style="text-align:center;"><input id="uname" placeholder="Your name" maxlength="30"></p>'+
+      '<button class="next" id="go">Begin &rarr;</button>'+
+      '<div class="warn">Do not close or reload this page while answering — progress is not saved.</div>'+
+    '</div>';
+  document.getElementById('go').onclick=()=>{
+    userName=document.getElementById('uname').value.trim()||'Anonymous';
+    started=true;idx=0;render();
+  };
+}
+
+function render(){
+  if(!started)return renderStart();
+  if(idx>=QS.length)return renderEnd();
+  const[s,q,opts]=QS[idx];
+  counter.textContent='Q '+pad(idx+1)+' / '+QS.length;
+  prog.style.width=Math.round((idx/QS.length)*100)+'%';
+  stage.innerHTML=
+    '<span class="cat mono">'+SECTIONS[s]+'</span>'+
+    '<div class="hint">Pick everything that is true. Honesty beats harmony here.</div>'+
+    '<p class="q">'+q+'</p>'+
+    '<div class="opts">'+opts.map((o,i)=>
+      '<button class="opt'+(sel[idx].has(i)?' sel':'')+'" data-i="'+i+'">'+o+'</button>'
+    ).join('')+
+    '<div class="own"><label>8 · Own answer</label><input id="ownin" maxlength="200" placeholder="In your own words..." value="'+esc(own[idx])+'"></div>'+
+    '</div>'+
+    '<div class="nav">'+
+      '<button class="ghost" id="back"'+(idx===0?' disabled':'')+'>&larr; Back</button>'+
+      '<div>'+
+        '<button class="ghost" id="skip" style="margin-right:12px;">Skip</button>'+
+        '<button class="next" id="next">Next &rarr;</button>'+
+      '</div>'+
+    '</div>';
+  stage.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
+    const i=+b.dataset.i;
+    if(sel[idx].has(i)){sel[idx].delete(i);b.classList.remove('sel');}
+    else{sel[idx].add(i);b.classList.add('sel');}
+  });
+  const saveOwn=()=>{own[idx]=document.getElementById('ownin').value.trim();};
+  document.getElementById('ownin').addEventListener('input',saveOwn);
+  const bk=document.getElementById('back');
+  if(!bk.disabled)bk.onclick=()=>{saveOwn();idx--;render();};
+  document.getElementById('skip').onclick=()=>{sel[idx].clear();own[idx]='';idx++;render();};
+  document.getElementById('next').onclick=()=>{saveOwn();idx++;render();};
+}
+
+function answerText(i){
+  const parts=[...sel[i]].sort((a,b)=>a-b).map(j=>QS[i][2][j]);
+  if(own[i])parts.push('Own answer: '+own[i]);
+  return parts.length?parts.join(' / '):'(skipped)';
+}
+
+function buildTextReport(){
+  const d=new Date();
+  let r='US - CHECK-IN REPORT\n';
+  r+='Name: '+userName+'  ·  Date: '+d.toLocaleDateString('en-GB')+'\n';
+  r+='='.repeat(50)+'\n';
+  let s=-1;
+  QS.forEach((q,i)=>{
+    if(q[0]!==s){s=q[0];r+='\n['+SECTIONS[s].toUpperCase()+']\n';}
+    r+=(i+1)+'. '+q[1]+'\n   -> '+answerText(i)+'\n';
+  });
+  r+='\n'+'='.repeat(50)+'\nNext step: swap reports with your partner - or give both reports to Claude and ask where your wishes match, where they miss each other, and what the three of you (him, her, us) should work on.';
+  return r;
+}
+
+function buildPrintReport(){
+  const d=new Date();
+  let h='<h1>Us — check-in report</h1><div class="meta">'+esc(userName)+' · '+d.toLocaleDateString('en-GB')+' · the last 2-3 months &amp; the next 2-3</div>';
+  let s=-1;
+  QS.forEach((q,i)=>{
+    if(q[0]!==s){s=q[0];h+='<h2>'+esc(SECTIONS[s])+'</h2>';}
+    h+='<div class="pq"><div class="t">'+(i+1)+'. '+esc(q[1])+'</div><div class="a">→ '+esc(answerText(i))+'</div></div>';
+  });
+  document.getElementById('printReport').innerHTML=h;
+}
+
+function renderEnd(){
+  const done=QS.filter((q,i)=>sel[i].size>0||own[i]).length;
+  counter.textContent='DONE';
+  prog.style.width='100%';
+  stage.innerHTML=
+    '<div class="end">'+
+      '<h2>Done, '+esc(userName)+'.</h2>'+
+      '<p style="text-align:center;">'+done+' of '+QS.length+' questions answered. Download your report as a PDF (choose -Save as PDF- in the print dialog) or copy it as text. Then: swap with your partner.</p>'+
+      '<div class="actions">'+
+        '<button class="btn" id="pdf">Download PDF report</button>'+
+        '<button class="btn alt" id="copy">Copy as text</button>'+
+        '<button class="btn alt" id="restart">Start over</button>'+
+      '</div>'+
+      '<div id="copied"></div>'+
+    '</div>';
+  document.getElementById('pdf').onclick=()=>{buildPrintReport();window.print();};
+  document.getElementById('copy').onclick=()=>{
+    const t=buildTextReport();
+    const done2=()=>{document.getElementById('copied').textContent='✓ Copied — paste it into the chat';};
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(done2).catch(()=>{
+        const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done2();
+      });
+    }else{
+      const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();done2();
+    }
+  };
+  document.getElementById('restart').onclick=()=>{
+    idx=0;sel.forEach(s=>s.clear());own.fill('');started=false;render();
+  };
+}
+
+render();
+</script>
+</body>
+</html>
